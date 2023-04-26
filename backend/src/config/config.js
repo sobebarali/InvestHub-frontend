@@ -46,5 +46,10 @@ exports.config = {
     jwt: {
         SECRET: process.env.JWT_SECRET,
     },
+    aws: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        region: process.env.AWS_REGION,
+    },
     PORT: process.env.PORT,
 };

@@ -34,7 +34,10 @@ class UserController {
                     return res.status(400).json({ message: "User already exists" });
                 }
                 const hashedPassword = yield bcrypt.hash(password, 10);
-                yield UserController.createUser(email, hashedPassword);
+                const role = email.split("@")[1].split(".")[0] === "pitchground"
+                    ? "shareholder"
+                    : "investor";
+                yield UserController.createUser(email, hashedPassword, role);
                 yield UserController.sendVerificationEmail(email);
                 res.json({ message: "User registered successfully" });
             }
@@ -60,8 +63,8 @@ class UserController {
                 if (!comparePassword) {
                     return res.status(400).json({ message: "Invalid credentials" });
                 }
-                const token = jwt.sign({ id: user._id }, config_1.config.jwt.SECRET, {
-                    expiresIn: "1h",
+                const token = jwt.sign({ userId: user._id, role: user.role }, config_1.config.jwt.SECRET, {
+                    expiresIn: "24h",
                 });
                 res.json({ message: "User logged in successfully", token });
             }
@@ -100,8 +103,11 @@ class UserController {
                 });
                 const { email } = data;
                 const userExists = yield UserController.checkIfUserExists(email);
+                const role = email.split("@")[1].split(".")[0] === "pitchground"
+                    ? "shareholder"
+                    : "investor";
                 if (!userExists) {
-                    yield UserController.createUserByGoogle(email);
+                    yield UserController.createUserByGoogle(email, role);
                     yield UserController.updateUserVerificationStatus(email);
                 }
                 res.redirect("http://localhost:3000");
@@ -118,15 +124,15 @@ class UserController {
             return !!user;
         });
     }
-    static createUserByGoogle(email) {
+    static createUserByGoogle(email, role) {
         return __awaiter(this, void 0, void 0, function* () {
             const user = new userModel_1.default({ email });
             yield user.save();
         });
     }
-    static createUser(email, password) {
+    static createUser(email, password, role) {
         return __awaiter(this, void 0, void 0, function* () {
-            const user = new userModel_1.default({ email, password, isVerified: false });
+            const user = new userModel_1.default({ email, password, role, isVerified: false });
             yield user.save();
         });
     }

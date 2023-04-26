@@ -33,7 +33,12 @@ class UserController {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      await UserController.createUser(email, hashedPassword);
+      const role =
+        email.split("@")[1].split(".")[0] === "pitchground"
+          ? "shareholder"
+          : "investor";
+
+      await UserController.createUser(email, hashedPassword, role);
 
       await UserController.sendVerificationEmail(email);
       res.json({ message: "User registered successfully" });
@@ -65,9 +70,13 @@ class UserController {
         return res.status(400).json({ message: "Invalid credentials" });
       }
 
-      const token = jwt.sign({ id: user._id }, config.jwt.SECRET, {
-        expiresIn: "1h",
-      });
+      const token = jwt.sign(
+        { userId: user._id, role: user.role },
+        config.jwt.SECRET,
+        {
+          expiresIn: "24h",
+        }
+      );
 
       res.json({ message: "User logged in successfully", token });
     } catch (error) {
@@ -112,8 +121,13 @@ class UserController {
       const { email } = data;
       const userExists = await UserController.checkIfUserExists(email);
 
+      const role =
+        email.split("@")[1].split(".")[0] === "pitchground"
+          ? "shareholder"
+          : "investor";
+
       if (!userExists) {
-        await UserController.createUserByGoogle(email);
+        await UserController.createUserByGoogle(email, role);
         await UserController.updateUserVerificationStatus(email);
       }
 
@@ -129,16 +143,20 @@ class UserController {
     return !!user;
   }
 
-  private static async createUserByGoogle(email: string): Promise<void> {
+  private static async createUserByGoogle(
+    email: string,
+    role: string
+  ): Promise<void> {
     const user = new User({ email });
     await user.save();
   }
 
   private static async createUser(
     email: string,
-    password: string
+    password: string,
+    role: string
   ): Promise<void> {
-    const user = new User({ email, password, isVerified: false });
+    const user = new User({ email, password, role, isVerified: false });
     await user.save();
   }
 
